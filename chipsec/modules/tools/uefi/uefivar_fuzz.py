@@ -76,12 +76,14 @@ class uefivar_fuzz(BaseModule):
     def __init__(self):
         BaseModule.__init__(self)
         self._uefi = UEFI(self.cs)
+        self.rc_res = ModuleResult(9, 'https://chipsec.github.io/modules/chipsec.modules.tools.uefi.uefivar_fuzz.html')
 
     def is_supported(self):
         supported = self.cs.helper.EFI_supported()
         if not supported:
             self.logger.log_important("OS does not support UEFI Runtime API.  Skipping module.")
-            self.res = ModuleResult.NOTAPPLICABLE
+            self.rc_res.setStatusBit(self.rc_res.status.NOT_APPLICABLE)
+            self.res = self.rc_res.getReturnCode(ModuleResult.NOTAPPLICABLE)
         return supported
 
     def rnd(self, n=1):
@@ -226,6 +228,6 @@ class uefivar_fuzz(BaseModule):
         self.logger.log_warning('Fuzzing complete: platform is in an unknown state.')
         self.logger.log_important('Evaluate the platform for expected behavior to determine PASS/FAIL')
         self.logger.log_important('Behavior can include platform stability and retaining protections.')
-
-        self.res = ModuleResult.WARNING
+        self.rc_res.setStatusBit(self.rc_res.status.VERIFY)
+        self.res = self.rc_res.getReturnCode(ModuleResult.WARNING)
         return self.res

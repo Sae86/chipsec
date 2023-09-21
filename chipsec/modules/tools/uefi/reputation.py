@@ -59,6 +59,7 @@ class reputation(BaseModule):
         self.image = None
         self.vt_threshold = 10
         self.vt = None
+        self.rc_res = ModuleResult(6, 'https://chipsec.github.io/modules/chipsec.modules.tools.uefi.reputation.html')
 
     def is_supported(self):
         if has_virus_total_apis:
@@ -66,7 +67,8 @@ class reputation(BaseModule):
         else:
             self.logger.log_important("""Can't import module 'virus_total_apis'.
 Please run 'pip install virustotal-api' and try again.""")
-            self.res = ModuleResult.NOTAPPLICABLE
+            self.rc_res.setStatusBit(self.rc_res.status.NOT_APPLICABLE)
+            self.res = self.rc_res.getReturnCode(ModuleResult.NOTAPPLICABLE)
             return False
 
     def reputation_callback(self, efi_module):
@@ -96,8 +98,6 @@ Please run 'pip install virustotal-api' and try again.""")
         return False
 
     def check_reputation(self):
-        res = ModuleResult.PASSED
-
         # parse the UEFI firmware image and look for EFI modules matching the blocked-list
         efi_tree = build_efi_model(self.image, None)
         match_types = EFIModuleType.SECTION_EXE
@@ -105,11 +105,13 @@ Please run 'pip install virustotal-api' and try again.""")
         found = len(matching_modules) > 0
         self.logger.log('')
         if found:
-            res = ModuleResult.WARNING
             self.logger.log_warning("Suspicious EFI binary found in the UEFI firmware image")
+            self.rc_res.setStatusBit(self.rc_res.status.POTENTIALLY_VULNERABLE)
+            self.res = self.rc_res.getReturnCode(ModuleResult.WARNING)
         else:
             self.logger.log_passed("Didn't find any suspicious EFI binary")
-        return res
+            self.rc_res.setStatusBit(self.rc_res.status.SUCCESS)
+            self.res = self.rc_res.getReturnCode(ModuleResult.PASSED)
 
     def usage(self):
         self.logger.log(USAGE_TEXT)

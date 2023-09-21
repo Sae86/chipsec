@@ -78,6 +78,7 @@ class scan_image(BaseModule):
         self.image = None
         self.efi_list = None
         self.suspect_modules = {}
+        self.rc_res = ModuleResult(8, 'https://chipsec.github.io/modules/chipsec.modules.tools.uefi.scan_image.html')
 
     def is_supported(self):
         return True
@@ -113,7 +114,8 @@ class scan_image(BaseModule):
         self.logger.log(f'[*] Found {len(self.efi_list):d} EFI executables in UEFI firmware image \'{self.image_file}\'')
         self.logger.log(f'[*] Creating JSON file \'{json_pth}\'...')
         write_file(f'{json_pth}', json.dumps(self.efi_list, indent=2, separators=(',', ': '), cls=UUIDEncoder))
-        return ModuleResult.PASSED
+        self.rc_res.setStatusBit(self.rc_res.status.SUCCESS)
+        return self.rc_res.getReturnCode(ModuleResult.PASSED)
 
     #
     # Checks EFI executable binaries against allowed list
@@ -142,10 +144,12 @@ class scan_image(BaseModule):
 
         if len(self.suspect_modules) > 0:
             self.logger.log_warning(f'Found {len(self.suspect_modules):d} EFI executables not in the list \'{json_pth}\'')
-            return ModuleResult.WARNING
+            self.rc_res.setStatusBit(self.rc_res.status.POTENTIALLY_VULNERABLE)
+            return self.rc_res.getReturnCode(ModuleResult.WARNING)
         else:
             self.logger.log_passed(f'All EFI executables match the list \'{json_pth}\'')
-            return ModuleResult.PASSED
+            self.rc_res.setStatusBit(self.rc_res.status.SUCCESS)
+            return self.rc_res.getReturnCode(ModuleResult.PASSED)
 
     def usage(self):
         self.logger.log(__doc__.replace('`', ''))
@@ -153,7 +157,8 @@ class scan_image(BaseModule):
     def run(self, module_argv):
         self.logger.start_test("Simple list generation/checking for (U)EFI firmware")
 
-        self.res = ModuleResult.NOTAPPLICABLE
+        self.rc_res.setStatusBit(self.rc_res.status.NOT_APPLICABLE)
+        self.res = self.rc_res.getReturnCode(ModuleResult.NOTAPPLICABLE)
 
         op = module_argv[0] if len(module_argv) > 0 else 'generate'
 
@@ -182,13 +187,15 @@ class scan_image(BaseModule):
             if op == 'generate':
                 if os.path.exists(json_pth):
                     self.logger.log_error(f'JSON file \'{json_file}\' already exists. Exiting...')
-                    self.res = ModuleResult.ERROR
+                    self.rc_res.setStatusBit(self.rc_res.status.ACCESS_RW)
+                    self.res = self.rc_res.getReturnCode(ModuleResult.ERROR)
                 else:
                     self.res = self.generate_efilist(json_pth)
             elif op == 'check':
                 if not os.path.exists(json_pth):
                     self.logger.log_error(f'JSON file \'{json_file}\' doesn\'t exist. Exiting...')
-                    self.res = ModuleResult.ERROR
+                    self.rc_res.setStatusBit(self.rc_res.status.ACCESS_RW)
+                    self.res = self.rc_res.getReturnCode(ModuleResult.ERROR)
                 else:
                     self.res = self.check_list(json_pth)
 

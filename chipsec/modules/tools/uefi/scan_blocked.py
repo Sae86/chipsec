@@ -73,6 +73,7 @@ class scan_blocked(BaseModule):
         self.image = None
         self.efi_blockedlist = None
         self.cpuid = None
+        self.rc_res = ModuleResult(6, 'https://chipsec.github.io/modules/chipsec.modules.tools.uefi.scan_blocked.html')
 
     def is_supported(self):
         return True
@@ -81,8 +82,6 @@ class scan_blocked(BaseModule):
         return check_match_criteria(efi_module, self.efi_blockedlist, self.logger, self.cpuid)
 
     def check_blockedlist(self):
-        res = ModuleResult.PASSED
-
         self.logger.log(f'[*] Searching for EFI binaries that match criteria from \'{self.cfg_name}\':')
         for k in self.efi_blockedlist.keys():
             entry = self.efi_blockedlist[k]
@@ -96,7 +95,8 @@ class scan_blocked(BaseModule):
         found = len(matching_modules) > 0
         self.logger.log('')
         if found:
-            res = ModuleResult.WARNING
+            self.rc_res.setStatusBit(self.rc_res.status.POTENTIALLY_VULNERABLE)
+            res = self.rc_res.getReturnCode(ModuleResult.WARNING)
             self.logger.log_warning("Blocked EFI binary found in the UEFI firmware image")
         else:
             self.logger.log_passed("Didn't find any blocked EFI binary")
@@ -136,7 +136,8 @@ class scan_blocked(BaseModule):
             if len(module_argv) == 0:
                 self.logger.log_important('Unable to read SPI and generate FW image. Access may be blocked.')
             self.logger.log_error('No FW image file to read.  Exiting!')
-            self.res = ModuleResult.ERROR
+            self.rc_res.setStatusBit(self.rc_res.status.ACCESS_RW)
+            self.res = self.rc_res.getReturnCode(ModuleResult.ERROR)
             return self.res
 
         # Load JSON config with blocked EFI modules
