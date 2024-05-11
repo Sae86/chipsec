@@ -22,7 +22,7 @@
 import re
 import os
 import traceback
-import pickle
+import json
 import chipsec.library.logger
 from chipsec.library.returncode import ModuleResult, generate_hash_id
 
@@ -94,6 +94,17 @@ class Module:
             self.update_module_ids_file() 
         return module_id
     
+    def get_url_info(self):
+        with open(os.path.join(os.getcwd(), 'chipsec', 'library', 'url_format.json'), 'r') as url_file:
+            url_info = json.loads(url_file.read())
+        return url_info
+    
+    def get_module_url(self, module_name: str):
+        base_url = self.get_url_info()
+        module_name.replace()
+        module_url = f'{base_url}{module_name}.html'
+        return module_url
+
     def run(self, module_argv):
         self.get_module_object()
 
@@ -105,6 +116,7 @@ class Module:
 
         if isinstance(self.mod_obj, chipsec.module_common.BaseModule):
             self.mod_obj.result.id = self.get_module_id(self.name)
+            self.mod_obj.result.id = self.get_module_url(self.name)
             if self.mod_obj.is_supported():
                 result = self.mod_obj.run(module_argv)
             else:
